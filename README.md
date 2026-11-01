@@ -56,12 +56,15 @@ jupyter notebook
 
 Abra `notebooks/01_auditoria_inicial.ipynb` e execute as células em ordem.
 
-## Etapas planejadas
+## Organização metodológica
 
-1. Auditoria inicial de esquema, qualidade, tipos e distribuição do alvo.
-2. Definição de validação reproduzível e baseline simples.
-3. Comparação de modelos com pipelines e seleção de hiperparâmetros sem consultar o teste final.
-4. Escolha do limiar conforme os critérios da competição e análise dos erros.
-5. Interpretação de importância de atributos quando aplicável e preparação da submissão reproduzível.
+O notebook segue o fluxo abaixo. Nesta etapa estão preparados o carregamento, a auditoria e o protocolo; spot-checking e resultados virão em uma etapa posterior.
 
-As próximas etapas serão implementadas depois de revisar os achados desta auditoria, preservando as decisões e resultados experimentais.
+1. **Carregamento inicial:** importação de bibliotecas e leitura dos dados.
+2. **Preparação dos dados:** tratamento de inconsistências após investigação; sem criar atributos derivados até haver justificativa; preparação de pipelines para codificação e tratamento de ausências dentro dos folds.
+3. **Protocolo de avaliação:** divisão estratificada de 80% para desenvolvimento e 20% para holdout local, com semente 42; validação cruzada estratificada de 5 folds no desenvolvimento; ROC-AUC para seleção e comparação principal. O holdout será consultado uma vez após as decisões de modelo.
+4. **Spot-checking:** próxima etapa; comparar um conjunto pequeno de algoritmos e configurações iniciais.
+5. **Resultados:** próxima etapa; tabela e gráfico com resultados de validação e, após seleção, avaliação no holdout.
+6. **Interpretação:** próxima etapa; discutir desempenho, diferenças, limitações e importância de atributos como associações, sem afirmações causais.
+
+O `id` fica fora de `X`. Transformações aprendidas, como imputação, codificação e escala, devem ser ajustadas dentro de `Pipeline`/`ColumnTransformer` para cada fold. LR− e F1 dependem do limiar; o limiar será escolhido usando predições out-of-fold dos dados de desenvolvimento e seus efeitos serão reportados separadamente da AUC. Após avaliação local e definição das escolhas, o modelo final poderá ser reajustado com todos os dados rotulados. Nenhuma decisão será baseada nos rótulos do teste final da competição.
