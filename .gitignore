@@ -1,0 +1,20 @@
+# Data files (keep competition and patient data out of the public repository)
+*.csv
+*.tsv
+*.xlsx
+*.xls
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local environments and secrets
+.venv/
+venv/
+.env
+.env.*
+!.env.example
