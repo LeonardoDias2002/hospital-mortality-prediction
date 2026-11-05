@@ -27,9 +27,9 @@ Coloque uma cópia local de `final_treino_val.csv` em `data/raw/final_treino_val
 
 No arquivo recebido, os nomes das colunas são `ID` e `DESFECHO` em maiúsculas. O notebook padroniza os nomes em memória para facilitar a análise. `desfecho` usa `0` para cura e `1` para óbito; `id` é identificador e não deve ser usado como preditor. Conforme o regulamento, AUC-ROC é a métrica principal. LR− e F1 são critérios de desempate baseados nos rótulos, logo a escolha do limiar será tratada separadamente da avaliação da AUC.
 
-## Ambiente
+## Instalação e execução
 
-Com Python instalado, crie e ative um ambiente virtual e instale as dependências:
+Com Python instalado, crie e ative um ambiente virtual:
 
 ```bash
 python -m venv .venv
@@ -47,10 +47,15 @@ No macOS/Linux:
 source .venv/bin/activate
 ```
 
-Depois:
+Instale todas as dependências listadas em `requirements.txt` com este comando:
 
-```bash
+```shell
 python -m pip install -r requirements.txt
+```
+
+O pacote `scikit-learn` fornece os imports `sklearn` usados pelo notebook. Para abrir o Jupyter:
+
+```shell
 jupyter notebook
 ```
 
