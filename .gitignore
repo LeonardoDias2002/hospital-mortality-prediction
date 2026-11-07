@@ -3,6 +3,8 @@
 *.tsv
 *.xlsx
 *.xls
+*.png
+*.PNG
 
 # Python
 __pycache__/
