@@ -14,11 +14,15 @@ Não há garantia de que um algoritmo específico seja o melhor. Modelos baseado
 ```text
 .
 ├── data/
-│   └── raw/                 # Dados locais, ignorados pelo Git
+│   └── raw/
+│       └── .gitkeep         # Mantém o diretório; dados locais são ignorados
 ├── notebooks/
 │   └── 01_auditoria_inicial.ipynb
 ├── results/
-│   └── stage4_model_search.json
+│   ├── stage4_model_search.json
+│   ├── stage5_results.json
+│   └── stage6_permutation_importance.json
+├── .gitattributes
 ├── .gitignore
 ├── README.md
 └── requirements.txt
