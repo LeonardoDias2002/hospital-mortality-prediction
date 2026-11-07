@@ -1,0 +1,53 @@
+{
+  "selected_model": "random_forest",
+  "selection_rule": "highest mean outer nested-CV ROC-AUC",
+  "nested_auc_mean": 0.7430884578386897,
+  "nested_auc_std": 0.013459394590232099,
+  "final_development_params": {
+    "model__min_samples_split": 10,
+    "model__min_samples_leaf": 2,
+    "model__max_features": 0.5,
+    "model__max_depth": 6,
+    "model__class_weight": null
+  },
+  "threshold_selection": {
+    "source": "out-of-fold development predictions from nested outer folds",
+    "rule": "minimize LR-, then maximize F1; class 1 when probability >= threshold",
+    "threshold": 0.08560873785339648,
+    "development_oof_lr_minus": 0.0,
+    "development_oof_f1": 0.728391959798995
+  },
+  "holdout_evaluation": {
+    "n_rows": 1267,
+    "used_for_model_or_threshold_selection": false,
+    "roc_auc": 0.7080875429443949,
+    "sensitivity": 1.0,
+    "specificity": 0.0,
+    "lr_minus": null,
+    "lr_minus_infinite": true,
+    "f1": 0.7279116465863453,
+    "confusion_matrix_labels_0_1": [
+      [
+        0,
+        542
+      ],
+      [
+        0,
+        725
+      ]
+    ]
+  },
+  "nested_fold_auc_reconstruction": [
+    0.73965915425659,
+    0.7412996734888907,
+    0.7300828223301743,
+    0.7658835709166202,
+    0.738517068201173
+  ],
+  "holdout_used_for_evaluation_once": true,
+  "plots": [
+    "stage5_nested_auc_mean_sd.png",
+    "stage5_nested_auc_by_fold.png",
+    "stage5_selected_model_holdout_roc.png"
+  ]
+}
