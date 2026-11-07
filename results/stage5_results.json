@@ -1,53 +1,256 @@
 {
-  "selected_model": "random_forest",
-  "selection_rule": "highest mean outer nested-CV ROC-AUC",
-  "nested_auc_mean": 0.7430884578386897,
-  "nested_auc_std": 0.013459394590232099,
-  "final_development_params": {
-    "model__min_samples_split": 10,
-    "model__min_samples_leaf": 2,
-    "model__max_features": 0.5,
-    "model__max_depth": 6,
-    "model__class_weight": null
-  },
-  "threshold_selection": {
-    "source": "out-of-fold development predictions from nested outer folds",
-    "rule": "minimize LR-, then maximize F1; class 1 when probability >= threshold",
-    "threshold": 0.08560873785339648,
-    "development_oof_lr_minus": 0.0,
-    "development_oof_f1": 0.728391959798995
-  },
-  "holdout_evaluation": {
-    "n_rows": 1267,
-    "used_for_model_or_threshold_selection": false,
-    "roc_auc": 0.7080875429443949,
-    "sensitivity": 1.0,
-    "specificity": 0.0,
-    "lr_minus": null,
-    "lr_minus_infinite": true,
-    "f1": 0.7279116465863453,
-    "confusion_matrix_labels_0_1": [
-      [
-        0,
-        542
+  "evaluation_scope": "comparative local holdout evaluation of all six model families",
+  "holdout_rows": 1267,
+  "holdout_used_for_hyperparameter_or_threshold_selection": false,
+  "holdout_is_independent_after_comparing_candidates": false,
+  "primary_selection_metric": "nested cross-validated ROC-AUC",
+  "threshold_selection_rule": "per model: minimize LR-, then maximize F1 on nested outer-fold OOF development scores (probability for probabilistic models; decision_function for SVC); predict class 1 when score >= threshold",
+  "models": {
+    "logistic_regression": {
+      "threshold": 0.07750573665342742,
+      "roc_auc": 0.7077185392543581,
+      "sensitivity": 1.0,
+      "specificity": 0.0018450184501845018,
+      "lr_minus": 0.0,
+      "lr_minus_infinite": false,
+      "f1": 0.7282772476142642,
+      "confusion_matrix_labels_0_1": [
+        [
+          1,
+          541
+        ],
+        [
+          0,
+          725
+        ]
       ],
-      [
-        0,
-        725
-      ]
-    ]
+      "development_oof_threshold_selection": {
+        "threshold": 0.07750573665342742,
+        "sensitivity": 1.0,
+        "specificity": 0.0013850415512465374,
+        "lr_minus": 0.0,
+        "f1": 0.728300464765733
+      },
+      "nested_fold_auc_reconstruction": [
+        0.739245042605718,
+        0.739762682169308,
+        0.7266902922672613,
+        0.754045552281596,
+        0.7297859809141776
+      ],
+      "score_type": "predict_proba(class=1)",
+      "full_development_params": {
+        "model__class_weight": "balanced",
+        "model__C": 0.1
+      }
+    },
+    "random_forest": {
+      "threshold": 0.08560873785339648,
+      "roc_auc": 0.7080875429443949,
+      "sensitivity": 1.0,
+      "specificity": 0.0,
+      "lr_minus": null,
+      "lr_minus_infinite": true,
+      "f1": 0.7279116465863453,
+      "confusion_matrix_labels_0_1": [
+        [
+          0,
+          542
+        ],
+        [
+          0,
+          725
+        ]
+      ],
+      "development_oof_threshold_selection": {
+        "threshold": 0.08560873785339648,
+        "sensitivity": 1.0,
+        "specificity": 0.0018467220683287165,
+        "lr_minus": 0.0,
+        "f1": 0.728391959798995
+      },
+      "nested_fold_auc_reconstruction": [
+        0.73965915425659,
+        0.7412996734888907,
+        0.7300828223301743,
+        0.7658835709166202,
+        0.738517068201173
+      ],
+      "score_type": "predict_proba(class=1)",
+      "full_development_params": {
+        "model__min_samples_split": 10,
+        "model__min_samples_leaf": 2,
+        "model__max_features": 0.5,
+        "model__max_depth": 6,
+        "model__class_weight": null
+      }
+    },
+    "extra_trees": {
+      "threshold": 0.11213460683348161,
+      "roc_auc": 0.7064448403104722,
+      "sensitivity": 1.0,
+      "specificity": 0.0,
+      "lr_minus": null,
+      "lr_minus_infinite": true,
+      "f1": 0.7279116465863453,
+      "confusion_matrix_labels_0_1": [
+        [
+          0,
+          542
+        ],
+        [
+          0,
+          725
+        ]
+      ],
+      "development_oof_threshold_selection": {
+        "threshold": 0.11213460683348161,
+        "sensitivity": 1.0,
+        "specificity": 0.0009233610341643582,
+        "lr_minus": 0.0,
+        "f1": 0.7282089927153982
+      },
+      "nested_fold_auc_reconstruction": [
+        0.7331388866767541,
+        0.7271561678744924,
+        0.7253404475591304,
+        0.7670701600700804,
+        0.730753006534387
+      ],
+      "score_type": "predict_proba(class=1)",
+      "full_development_params": {
+        "model__min_samples_split": 10,
+        "model__min_samples_leaf": 2,
+        "model__max_features": 0.5,
+        "model__max_depth": 6,
+        "model__class_weight": null
+      }
+    },
+    "gradient_boosting": {
+      "threshold": 0.12329512855175358,
+      "roc_auc": 0.7143377019977096,
+      "sensitivity": 1.0,
+      "specificity": 0.0036900369003690036,
+      "lr_minus": 0.0,
+      "lr_minus_infinite": false,
+      "f1": 0.7286432160804021,
+      "confusion_matrix_labels_0_1": [
+        [
+          2,
+          540
+        ],
+        [
+          0,
+          725
+        ]
+      ],
+      "development_oof_threshold_selection": {
+        "threshold": 0.12329512855175358,
+        "sensitivity": 1.0,
+        "specificity": 0.0004616805170821791,
+        "lr_minus": 0.0,
+        "f1": 0.7281175436393319
+      },
+      "nested_fold_auc_reconstruction": [
+        0.7375885960022299,
+        0.7417456398821375,
+        0.7347137055029067,
+        0.7599267340925381,
+        0.7356776740447141
+      ],
+      "score_type": "predict_proba(class=1)",
+      "full_development_params": {
+        "model__subsample": 0.7,
+        "model__n_estimators": 200,
+        "model__min_samples_leaf": 10,
+        "model__max_depth": 2,
+        "model__learning_rate": 0.05
+      }
+    },
+    "hist_gradient_boosting": {
+      "threshold": 0.12589147531885064,
+      "roc_auc": 0.7154345336556813,
+      "sensitivity": 0.9986206896551724,
+      "specificity": 0.007380073800738007,
+      "lr_minus": 0.18689655172414432,
+      "lr_minus_infinite": false,
+      "f1": 0.7287367891293407,
+      "confusion_matrix_labels_0_1": [
+        [
+          4,
+          538
+        ],
+        [
+          1,
+          724
+        ]
+      ],
+      "development_oof_threshold_selection": {
+        "threshold": 0.12589147531885064,
+        "sensitivity": 1.0,
+        "specificity": 0.006463527239150508,
+        "lr_minus": 0.0,
+        "f1": 0.7293081761006289
+      },
+      "nested_fold_auc_reconstruction": [
+        0.7381141992514136,
+        0.7405311778290993,
+        0.7331607868121366,
+        0.7618917735127817,
+        0.7368556147178913
+      ],
+      "score_type": "predict_proba(class=1)",
+      "full_development_params": {
+        "model__min_samples_leaf": 20,
+        "model__max_leaf_nodes": 7,
+        "model__max_iter": 100,
+        "model__learning_rate": 0.1,
+        "model__l2_regularization": 0.1
+      }
+    },
+    "svc_rbf": {
+      "threshold": -1.951302031107522,
+      "roc_auc": 0.7111057386435934,
+      "sensitivity": 1.0,
+      "specificity": 0.0018450184501845018,
+      "lr_minus": 0.0,
+      "lr_minus_infinite": false,
+      "f1": 0.7282772476142642,
+      "confusion_matrix_labels_0_1": [
+        [
+          1,
+          541
+        ],
+        [
+          0,
+          725
+        ]
+      ],
+      "development_oof_threshold_selection": {
+        "threshold": -1.951302031107522,
+        "sensitivity": 1.0,
+        "specificity": 0.00554016620498615,
+        "lr_minus": 0.0,
+        "f1": 0.7291247484909457
+      },
+      "nested_fold_auc_reconstruction": [
+        0.7363183881500358,
+        0.7381898542645537,
+        0.7283029385999841,
+        0.7551883411642909,
+        0.7315409533360394
+      ],
+      "score_type": "decision_function",
+      "full_development_params": {
+        "model__gamma": 0.01,
+        "model__class_weight": "balanced",
+        "model__C": 3.0
+      }
+    }
   },
-  "nested_fold_auc_reconstruction": [
-    0.73965915425659,
-    0.7412996734888907,
-    0.7300828223301743,
-    0.7658835709166202,
-    0.738517068201173
-  ],
-  "holdout_used_for_evaluation_once": true,
   "plots": [
     "stage5_nested_auc_mean_sd.png",
     "stage5_nested_auc_by_fold.png",
-    "stage5_selected_model_holdout_roc.png"
+    "stage5_all_models_holdout_roc.png"
   ]
 }
