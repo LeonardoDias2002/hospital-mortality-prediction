@@ -1,6 +1,7 @@
 # Hospital Mortality Prediction
 
-Projeto acadêmico de classificação binária para estimar a probabilidade de óbito em pacientes hospitalizados, seguindo o regulamento do Code Challenge 2026.
+Projeto acadêmico de classificação binária para estimar a probabilidade de óbito em pacientes hospitalizados, seguindo o regulamento do Code Challenge da Escola Regional de Aprendizado de Máquina
+e Inteligência Artificial da Região Sul de 2026.
 
 ## Objetivo e princípio de trabalho
 
@@ -65,13 +66,13 @@ Abra `notebooks/01_auditoria_inicial.ipynb` e execute as células em ordem.
 
 ## Organização metodológica
 
-O notebook segue o fluxo abaixo. As etapas 1 a 5 estão preparadas; a etapa 4 registra validação aninhada e hiperparâmetros encontrados em uma busca limitada. A etapa 5 inclui tabelas comparativas, gráficos das AUCs externas e a avaliação comparativa dos seis algoritmos no holdout local. A interpretação é a etapa seguinte.
+O notebook segue o fluxo abaixo. As etapas 1 a 6 estão preparadas; a etapa 4 registra validação aninhada e hiperparâmetros encontrados em uma busca limitada. A etapa 5 inclui tabelas comparativas, gráficos das AUCs externas e a avaliação comparativa dos seis algoritmos no holdout local. A etapa 6 interpreta o ranking, os erros de classificação e a importância preditiva por permutação.
 
 1. **Carregamento inicial:** importação de bibliotecas e leitura dos dados.
 2. **Preparação dos dados:** tratamento de inconsistências após investigação; sem criar atributos derivados até haver justificativa; preparação de pipelines para codificação e tratamento de ausências dentro dos folds.
 3. **Protocolo de avaliação:** divisão estratificada de 80% para desenvolvimento e 20% para holdout local, com semente 42; validação cruzada estratificada de 5 folds no desenvolvimento; ROC-AUC para seleção e comparação principal. O holdout local não ajusta hiperparâmetros ou limiares; a etapa 5 compara nele os seis candidatos, portanto seus resultados não são uma estimativa independente após a escolha de um vencedor.
 4. **Spot-checking:** regressão logística, Random Forest, Extra Trees, Gradient Boosting, HistGradientBoosting e SVC RBF; busca aleatória com ROC-AUC e validação cruzada aninhada. Os melhores parâmetros encontrados em todo o desenvolvimento são guardados em `results/stage4_model_search.json`.
 5. **Resultados:** (5.1) tabelas comparativas da AUC aninhada, dos hiperparâmetros e da avaliação comparativa dos seis modelos no holdout; (5.2) gráficos de médias e dispersões, pontos por fold e curva ROC. Os agregados ficam em `results/stage5_results.json`; os gráficos em `results/stage5_*.png`.
-6. **Interpretação:** próxima etapa; discutir desempenho, diferenças, limitações e importância de atributos como associações, sem afirmações causais.
+6. **Interpretação:** comparar resultados e erros; calcular Permutation Importance do Random Forest nos folds externos de desenvolvimento, sem usar o holdout e sem afirmações causais. Os valores agregados ficam em `results/stage6_permutation_importance.json` e o gráfico em `results/stage6_permutation_importance.png`.
 
 O `id` fica fora de `X`. Transformações aprendidas, como imputação, codificação e escala, devem ser ajustadas dentro de `Pipeline`/`ColumnTransformer` para cada fold. LR− e F1 dependem do limiar; o limiar será escolhido usando predições out-of-fold dos dados de desenvolvimento e seus efeitos serão reportados separadamente da AUC. Após avaliação local e definição das escolhas, o modelo final poderá ser reajustado com todos os dados rotulados. Nenhuma decisão será baseada nos rótulos do teste final da competição.
