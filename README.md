@@ -66,7 +66,17 @@ O pacote `scikit-learn` fornece os imports `sklearn` usados pelo notebook. Para 
 jupyter notebook
 ```
 
-Abra `notebooks/01_auditoria_inicial.ipynb` e execute as células em ordem.
+Abra `notebooks/01_auditoria_inicial.ipynb` e execute as células em ordem para reproduzir auditoria e busca. Quando receber o teste oficial, use o fluxo abaixo.
+
+## Quando receber o arquivo oficial de teste
+
+1. Copie o CSV para `data/raw/final_teste.csv` (mantenha também `data/raw/final_treino_val.csv`).
+2. Abra `notebooks/02_avaliacao_teste.ipynb` e execute **Run All / Executar tudo**. Não é necessário repetir as buscas da etapa 4: o notebook reutiliza os melhores hiperparâmetros salvos e reajusta os seis pipelines em todas as linhas rotuladas do arquivo de treino.
+3. A tabela e a curva ROC são exibidas se o arquivo de teste contiver a coluna `DESFECHO`. Se não houver rótulos, o notebook informa que não é possível medir desempenho e gera apenas scores/classes previstos.
+
+Os scores por registro ficam em `results/official_test_model_scores.csv` e as métricas agregadas em `results/official_test_metrics.json`. CSVs continuam ignorados pelo Git. O arquivo de scores não é uma submissão pronta; confira o formato solicitado pela competição antes de enviar.
+
+O código verifica se o arquivo de treino continua correspondendo ao utilizado na busca de hiperparâmetros. Se ele mudar, será necessário atualizar busca/limiares nas etapas anteriores antes de pontuar o teste. O alvo de teste, se existir, só é usado após os modelos já ajustados e nunca para treinar, pré-processar, selecionar parâmetros ou escolher limiares.
 
 ## Organização metodológica
 
@@ -78,5 +88,6 @@ O notebook segue o fluxo abaixo. As etapas 1 a 6 estão preparadas; a etapa 4 re
 4. **Spot-checking:** regressão logística, Random Forest, Extra Trees, Gradient Boosting, HistGradientBoosting e SVC RBF; busca aleatória com ROC-AUC e validação cruzada aninhada. Os melhores parâmetros encontrados em todo o desenvolvimento são guardados em `results/stage4_model_search.json`.
 5. **Resultados:** (5.1) tabelas comparativas da AUC aninhada, dos hiperparâmetros e da avaliação comparativa dos seis modelos no holdout; (5.2) gráficos de médias e dispersões, pontos por fold e curva ROC. Os agregados ficam em `results/stage5_results.json`; os gráficos em `results/stage5_*.png`.
 6. **Interpretação:** comparar resultados e erros; calcular Permutation Importance do Random Forest nos folds externos de desenvolvimento, sem usar o holdout e sem afirmações causais. Os valores agregados ficam em `results/stage6_permutation_importance.json` e o gráfico em `results/stage6_permutation_importance.png`.
+7. **Teste oficial:** executar `notebooks/02_avaliacao_teste.ipynb`; refitar os seis candidatos com os hiperparâmetros da etapa 4 e pontuar o arquivo `data/raw/final_teste.csv`.
 
 O `id` fica fora de `X`. Transformações aprendidas, como imputação, codificação e escala, devem ser ajustadas dentro de `Pipeline`/`ColumnTransformer` para cada fold. LR− e F1 dependem do limiar; o limiar será escolhido usando predições out-of-fold dos dados de desenvolvimento e seus efeitos serão reportados separadamente da AUC. Após avaliação local e definição das escolhas, o modelo final poderá ser reajustado com todos os dados rotulados. Nenhuma decisão será baseada nos rótulos do teste final da competição.

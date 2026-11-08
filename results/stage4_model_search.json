@@ -20,7 +20,8 @@
     "development_rows": 5065,
     "holdout_reserved_rows": 1267,
     "holdout_used_for_model_selection_or_scoring": false,
-    "preprocessing_inside_pipeline": true
+    "preprocessing_inside_pipeline": true,
+    "labeled_training_file_sha256": "e87e1b53834232ce86b282b42bc67dfb734b5e66c4e449c77a4c2d171246a841"
   },
   "nested_cv": {
     "logistic_regression": {
