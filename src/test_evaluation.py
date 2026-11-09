@@ -21,6 +21,8 @@ from sklearn.ensemble import (
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
+    confusion_matrix,
+    f1_score,
     roc_auc_score,
     roc_curve,
 )
@@ -189,12 +191,9 @@ def evaluate_official_test(
 
     search_results = json.loads(search_path.read_text(encoding="utf-8"))
     model_params = search_results["best_params_on_all_labeled_data"]
-    nested = search_results.get("nested_cv", {})
-    if not nested:
-        raise ValueError("O artefato não contém resultados da validação aninhada.")
-    selected_model = max(nested, key=lambda name: nested[name]["outer_auc_mean"])
-    if selected_model not in MODEL_NAMES or selected_model not in model_params:
-        raise ValueError("O modelo selecionado não tem parâmetros finais registrados.")
+    absent_models = set(MODEL_NAMES) - set(model_params)
+    if absent_models:
+        raise ValueError(f"Artefatos incompletos para os modelos: {sorted(absent_models)}")
 
     # Se os dados rotulados mudaram, os parâmetros salvos podem estar obsoletos.
     protocol = search_results.get("protocol", {})
@@ -213,7 +212,7 @@ def evaluate_official_test(
     score_types: dict[str, str] = {}
     rows: list[dict[str, Any]] = []
 
-    for name in [selected_model]:
+    for name in MODEL_NAMES:
         pipeline = Pipeline(
             steps=[("preprocessor", clone(preprocessor)), ("model", clone(models[name]))]
         )
@@ -227,18 +226,29 @@ def evaluate_official_test(
         else:
             score = pipeline.decision_function(X_test)
             score_type = "decision_function (não é probabilidade)"
+        decision_threshold = 0.0 if name == "svc_rbf" else 0.5
+        predicted_class = (score >= decision_threshold).astype(int)
         score_columns[f"{name}_score"] = score
+        score_columns[f"{name}_predicted_class"] = predicted_class
         score_types[name] = score_type
 
         row: dict[str, Any] = {
             "Modelo": name,
             "Tipo de score": score_type,
+            "Limiar padrão": decision_threshold,
         }
         if y_test is not None:
             y_array = y_test.to_numpy()
             row["AUC-ROC"] = (
                 float(roc_auc_score(y_array, score)) if np.unique(y_array).size == 2 else None
             )
+            tn, fp, fn, tp = confusion_matrix(y_array, predicted_class, labels=[0, 1]).ravel()
+            row.update({
+                "Sensibilidade": _safe_ratio(int(tp), int(tp + fn)),
+                "Especificidade": _safe_ratio(int(tn), int(tn + fp)),
+                "F1": float(f1_score(y_array, predicted_class, zero_division=0)),
+                "TN": int(tn), "FP": int(fp), "FN": int(fn), "TP": int(tp),
+            })
         rows.append(row)
 
     metrics = pd.DataFrame(rows)
@@ -251,8 +261,8 @@ def evaluate_official_test(
     summary: dict[str, Any] = {
         "test_file": test_filename,
         "training_rows_used_for_refit": int(len(X_train)),
-        "model_selected_before_official_test": selected_model,
-        "selection_source": "highest mean outer ROC-AUC in nested CV on labeled training data",
+        "models_scored": MODEL_NAMES,
+        "decision_threshold_rule": "estimator default: 0.5 for predict_proba models; 0.0 for SVC decision_function; no threshold tuning",
         "test_rows_scored": int(len(X_test)),
         "test_labels_available": y_test is not None,
         "hyperparameters_source": "stage4_model_search.json; final stratified CV search on all labeled training rows",
@@ -269,7 +279,7 @@ def evaluate_official_test(
     figure = None
     if y_test is not None and y_test.nunique() == 2:
         figure, ax = plt.subplots(figsize=(7.5, 6.5))
-        for name in [selected_model]:
+        for name in MODEL_NAMES:
             score = score_columns[f"{name}_score"]
             fpr, tpr, _ = roc_curve(y_test, score, pos_label=1)
             auc_value = roc_auc_score(y_test, score)
@@ -280,7 +290,7 @@ def evaluate_official_test(
             ylim=(0, 1.02),
             xlabel="Taxa de falsos positivos",
             ylabel="Sensibilidade",
-            title="ROC dos modelos no arquivo de teste",
+            title="ROC dos seis modelos no arquivo de teste",
         )
         ax.legend(loc="lower right", frameon=False, fontsize=8)
         ax.grid(alpha=0.2)

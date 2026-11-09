@@ -9,6 +9,19 @@ O objetivo é comparar modelos de forma reproduzível, com foco na métrica prin
 
 Não há garantia de que um algoritmo específico seja o melhor. Modelos baseados em árvores e boosting são candidatos naturais para comparação em dados tabulares; a escolha dependerá da validação definida antes de olhar o conjunto de teste da competição. As variáveis têm nomes categorizados no material da competição, então seus significados clínicos não serão presumidos.
 
+## Diferenças entre `Full-Training` e `main`
+
+Este README descreve a branch `Full-Training`. Em relação à `main`, a mudança central é o uso dos dados rotulados durante o desenvolvimento e o ajuste final:
+
+| Etapa | `main` | `Full-Training` |
+|---|---|---|
+| Desenvolvimento | Reserva fixa estratificada de 20%; busca e validação aninhada usam os 80% restantes. | Não reserva holdout; a validação aninhada usa todos os registros rotulados ao longo dos folds. |
+| Comparação | Inclui métricas e gráficos dos seis modelos no holdout local. | Compara famílias pelas AUCs dos folds externos; não reporta avaliação de holdout. CV é evidência interna de desenvolvimento, não teste independente. |
+| Busca e ajuste final | Salva parâmetros encontrados nos dados de desenvolvimento e os reutiliza ao pontuar o teste; o pipeline é então ajustado com todos os dados rotulados. | Depois da comparação aninhada, refaz a busca estratificada em 100% dos rótulos. A família é escolhida antes do teste pela maior AUC externa média e reajustada em todos os rótulos. |
+| Teste oficial | Gera scores para seis modelos; se houver `DESFECHO`, calcula métricas após o ajuste. | Gera scores dos seis modelos; se houver `DESFECHO`, apresenta métricas pós-predição por modelo, sem usar os resultados para selecionar um vencedor. |
+
+As duas branches mantêm o `id` fora dos preditores e o pré-processamento dentro dos pipelines. Em `Full-Training`, execute o notebook 01 antes do notebook 02 para que os hiperparâmetros registrados correspondam à busca refeita com todos os dados rotulados.
+
 ## Estrutura
 
 ```text
@@ -76,9 +89,9 @@ Quando chegar o teste oficial:
 
 1. Coloque-o em `data/raw/final_teste.csv`.
 2. Reexecute primeiro o notebook 01 para refazer a validação e busca final sobre o CSV rotulado completo.
-3. Execute `notebooks/02_avaliacao_teste.ipynb`. Ele seleciona a família pela maior AUC externa média já observada na validação aninhada, reajusta essa família em todos os rótulos e então gera scores para o teste.
+3. Execute `notebooks/02_avaliacao_teste.ipynb`. Ele refaz a busca final em 100% dos rótulos, ajusta os seis modelos com seus parâmetros selecionados e gera scores para todos. Se houver `DESFECHO`, apresenta uma tabela final com AUC-ROC e métricas secundárias usando os limiares padrão de cada estimador; não use essa tabela para selecionar modelo ou limiar.
 
-O teste oficial não participa do ajuste de pré-processamento, treinamento, seleção de modelo ou hiperparâmetros, calibração de scores nem escolha de limiar. Se contiver `DESFECHO`, seus rótulos são usados somente depois de gerar os scores para calcular métricas finais. Não use essas métricas para voltar a escolher o modelo. Os scores individuais ficam em `results/official_test_model_scores.csv` e os agregados em `results/official_test_metrics.json`.
+O teste oficial não participa do ajuste de pré-processamento, treinamento, seleção de modelo ou hiperparâmetros, calibração de scores nem escolha de limiar. Se contiver `DESFECHO`, seus rótulos são usados somente depois de gerar os scores para calcular métricas finais dos seis modelos. A tabela é avaliação pós-predição, não seleção de modelo. Os scores individuais ficam em `results/official_test_model_scores.csv` e os agregados em `results/official_test_metrics.json`.
 
 ## Organização do projeto
 
