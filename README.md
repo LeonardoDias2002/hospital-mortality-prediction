@@ -5,7 +5,7 @@ e Inteligência Artificial da Região Sul de 2026.
 
 ## Objetivo e princípio de trabalho
 
-O objetivo é comparar modelos de forma reproduzível, com foco na métrica principal da competição, AUC-ROC. A análise dos atributos será descrita como associação com as predições, sem inferências causais ou afirmações clínicas. O projeto será desenvolvido por etapas: primeiro entender e validar os dados; depois estabelecer uma validação e um baseline; em seguida comparar modelos e limiares; por fim interpretar erros e preparar a submissão.
+O objetivo é comparar modelos de forma reproduzível, com foco na métrica principal da competição, AUC-ROC. A análise dos atributos será descrita como associação com as predições, sem inferências causais ou afirmações clínicas. O protocolo usa validação cruzada aninhada sobre todos os dados rotulados e reserva o teste oficial somente para pontuação final.
 
 Não há garantia de que um algoritmo específico seja o melhor. Modelos baseados em árvores e boosting são candidatos naturais para comparação em dados tabulares; a escolha dependerá da validação definida antes de olhar o conjunto de teste da competição. As variáveis têm nomes categorizados no material da competição, então seus significados clínicos não serão presumidos.
 
@@ -19,10 +19,7 @@ Não há garantia de que um algoritmo específico seja o melhor. Modelos baseado
 ├── notebooks/
 │   ├── 01_auditoria_inicial.ipynb
 │   └── 02_avaliacao_teste.ipynb
-├── results/
-│   ├── stage4_model_search.json
-│   ├── stage5_results.json
-│   └── stage6_permutation_importance.json
+├── results/                  # Artefatos locais gerados; JSON/CSV/figuras ignorados pelo Git
 ├── .gitattributes
 ├── .gitignore
 ├── README.md
@@ -33,7 +30,7 @@ Não há garantia de que um algoritmo específico seja o melhor. Modelos baseado
 
 Coloque uma cópia local de `final_treino_val.csv` em `data/raw/final_treino_val.csv`. Os arquivos de dados tabulares são ignorados pelo Git; não remova essa proteção nem force a inclusão dos dados no repositório público. O CSV original permanece fora do repositório.
 
-No arquivo recebido, os nomes das colunas são `ID` e `DESFECHO` em maiúsculas. O notebook padroniza os nomes em memória para facilitar a análise. `desfecho` usa `0` para cura e `1` para óbito; `id` é identificador e não deve ser usado como preditor. Conforme o regulamento, AUC-ROC é a métrica principal. LR− e F1 são critérios de desempate baseados nos rótulos, logo a escolha do limiar será tratada separadamente da avaliação da AUC.
+No arquivo recebido, os nomes das colunas são `ID` e `DESFECHO` em maiúsculas. O notebook padroniza os nomes em memória para facilitar a análise. `desfecho` usa `0` para cura e `1` para óbito; `id` é identificador e não deve ser usado como preditor. Conforme o regulamento, AUC-ROC é a métrica principal. Regras para decisão binária e limiar dependem do formato de submissão e dos critérios oficiais.
 
 ## Instalação e execução
 
@@ -69,26 +66,29 @@ jupyter notebook
 
 Abra `notebooks/01_auditoria_inicial.ipynb` e execute as células em ordem para reproduzir auditoria e busca. Quando receber o teste oficial, use o fluxo abaixo.
 
-## Quando receber o arquivo oficial de teste
+## Fluxo de desenvolvimento e teste oficial
 
-1. Copie o CSV para `data/raw/final_teste.csv` (mantenha também `data/raw/final_treino_val.csv`).
-2. Abra `notebooks/02_avaliacao_teste.ipynb` e execute **Run All / Executar tudo**. Não é necessário repetir as buscas da etapa 4: o notebook reutiliza os melhores hiperparâmetros salvos e reajusta os seis pipelines em todas as linhas rotuladas do arquivo de treino.
-3. A tabela e a curva ROC são exibidas se o arquivo de teste contiver a coluna `DESFECHO`. Se não houver rótulos, o notebook informa que não é possível medir desempenho e gera apenas scores/classes previstos.
+Execute `notebooks/01_auditoria_inicial.ipynb` do início ao fim com todos os registros rotulados de `final_treino_val.csv`. O protocolo usa validação estratificada aninhada: 5 folds externos para comparar famílias e 3 folds internos para selecionar parâmetros dentro de cada treino externo. A validação cruzada é uma estimativa interna de desenvolvimento; registros participam de validações ao longo dos folds, portanto ela não é um teste independente.
 
-Os scores por registro ficam em `results/official_test_model_scores.csv` e as métricas agregadas em `results/official_test_metrics.json`. CSVs continuam ignorados pelo Git. O arquivo de scores não é uma submissão pronta; confira o formato solicitado pela competição antes de enviar.
+Após a comparação aninhada, o notebook executa uma nova busca estratificada de 5 folds em 100% dos registros rotulados. Os parâmetros selecionados são registrados em `results/stage4_model_search.json`; pré-processamento continua dentro de cada pipeline/fold. `id` não entra em `X`. Não há divisão fixa de holdout. As tabelas e gráficos da etapa 5 descrevem apenas AUC externa por fold, média e dispersão descritiva; não são métricas de um conjunto reservado.
 
-O código verifica se o arquivo de treino continua correspondendo ao utilizado na busca de hiperparâmetros. Se ele mudar, será necessário atualizar busca/limiares nas etapas anteriores antes de pontuar o teste. O alvo de teste, se existir, só é usado após os modelos já ajustados e nunca para treinar, pré-processar, selecionar parâmetros ou escolher limiares.
+Quando chegar o teste oficial:
 
-## Organização metodológica
+1. Coloque-o em `data/raw/final_teste.csv`.
+2. Reexecute primeiro o notebook 01 para refazer a validação e busca final sobre o CSV rotulado completo.
+3. Execute `notebooks/02_avaliacao_teste.ipynb`. Ele seleciona a família pela maior AUC externa média já observada na validação aninhada, reajusta essa família em todos os rótulos e então gera scores para o teste.
 
-O notebook segue o fluxo abaixo. As etapas 1 a 6 estão preparadas; a etapa 4 registra validação aninhada e hiperparâmetros encontrados em uma busca limitada. A etapa 5 inclui tabelas comparativas, gráficos das AUCs externas e a avaliação comparativa dos seis algoritmos no holdout local. A etapa 6 interpreta o ranking, os erros de classificação e a importância preditiva por permutação.
+O teste oficial não participa do ajuste de pré-processamento, treinamento, seleção de modelo ou hiperparâmetros, calibração de scores nem escolha de limiar. Se contiver `DESFECHO`, seus rótulos são usados somente depois de gerar os scores para calcular métricas finais. Não use essas métricas para voltar a escolher o modelo. Os scores individuais ficam em `results/official_test_model_scores.csv` e os agregados em `results/official_test_metrics.json`.
 
-1. **Carregamento inicial:** importação de bibliotecas e leitura dos dados.
-2. **Preparação dos dados:** tratamento de inconsistências após investigação; sem criar atributos derivados até haver justificativa; preparação de pipelines para codificação e tratamento de ausências dentro dos folds.
-3. **Protocolo de avaliação:** divisão estratificada de 80% para desenvolvimento e 20% para holdout local, com semente 42; validação cruzada estratificada de 5 folds no desenvolvimento; ROC-AUC para seleção e comparação principal. O holdout local não ajusta hiperparâmetros ou limiares; a etapa 5 compara nele os seis candidatos, portanto seus resultados não são uma estimativa independente após a escolha de um vencedor.
-4. **Spot-checking:** regressão logística, Random Forest, Extra Trees, Gradient Boosting, HistGradientBoosting e SVC RBF; busca aleatória com ROC-AUC e validação cruzada aninhada. Os melhores parâmetros encontrados em todo o desenvolvimento são guardados em `results/stage4_model_search.json`.
-5. **Resultados:** (5.1) tabelas comparativas da AUC aninhada, dos hiperparâmetros e da avaliação comparativa dos seis modelos no holdout; (5.2) gráficos de médias e dispersões, pontos por fold e curva ROC. Os agregados ficam em `results/stage5_results.json`; os gráficos em `results/stage5_*.png`.
-6. **Interpretação:** comparar resultados e erros; calcular Permutation Importance do Random Forest nos folds externos de desenvolvimento, sem usar o holdout e sem afirmações causais. Os valores agregados ficam em `results/stage6_permutation_importance.json` e o gráfico em `results/stage6_permutation_importance.png`.
-7. **Teste oficial:** executar `notebooks/02_avaliacao_teste.ipynb`; refitar os seis candidatos com os hiperparâmetros da etapa 4 e pontuar o arquivo `data/raw/final_teste.csv`.
+## Organização do projeto
 
-O `id` fica fora de `X`. Transformações aprendidas, como imputação, codificação e escala, devem ser ajustadas dentro de `Pipeline`/`ColumnTransformer` para cada fold. LR− e F1 dependem do limiar; o limiar será escolhido usando predições out-of-fold dos dados de desenvolvimento e seus efeitos serão reportados separadamente da AUC. Após avaliação local e definição das escolhas, o modelo final poderá ser reajustado com todos os dados rotulados. Nenhuma decisão será baseada nos rótulos do teste final da competição.
+1. **Auditoria:** carregar o CSV local, verificar esquema, qualidade, cardinalidade e distribuições sem usar `id` como preditor.
+2. **Pré-processamento:** imputação, codificação e escala dentro de `Pipeline`/`ColumnTransformer` para evitar vazamento entre folds.
+3. **Comparação aninhada:** seis famílias, AUC-ROC, 5 folds externos e 3 internos estratificados sobre todos os registros rotulados.
+4. **Busca final:** nova busca aleatória com CV estratificada em todos os registros rotulados; os resultados da CV final servem à seleção de parâmetros e não são estimativa independente.
+5. **Resultados e interpretação:** curvas e tabelas dos folds externos; importância por permutação nos folds externos, entendida como associação preditiva, não causal.
+6. **Teste oficial:** busca refeita no conjunto rotulado completo, ajuste em 100% dele e pontuação do teste sem consultar seus rótulos durante qualquer decisão.
+
+## Proteção de dados
+
+Arquivos tabulares e figuras são ignorados pelo Git. Não force a inclusão de CSVs de pacientes, scores individuais ou resultados agregados que possam expor informação sensível. Os artefatos de resultados são gerados localmente ao executar os notebooks.

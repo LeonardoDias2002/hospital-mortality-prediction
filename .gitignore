@@ -20,3 +20,6 @@ venv/
 .env
 .env.*
 !.env.example
+
+# Derived metrics and model artifacts may contain sensitive aggregate information
+results/*.json

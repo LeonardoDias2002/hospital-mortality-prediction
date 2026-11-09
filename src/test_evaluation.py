@@ -1,4 +1,4 @@
-"""Fit the saved candidate pipelines and score an official test CSV."""
+"""Refit the preselected pipeline on all labels and score an official test CSV."""
 
 from __future__ import annotations
 
@@ -21,8 +21,6 @@ from sklearn.ensemble import (
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
-    confusion_matrix,
-    f1_score,
     roc_auc_score,
     roc_curve,
 )
@@ -176,12 +174,11 @@ def evaluate_official_test(
     train_path = raw_dir / train_filename
     test_path = raw_dir / test_filename
     search_path = root / "results" / "stage4_model_search.json"
-    threshold_path = root / "results" / "stage5_results.json"
-    for required_path in (train_path, test_path, search_path, threshold_path):
+    for required_path in (train_path, test_path, search_path):
         if not required_path.exists():
             raise FileNotFoundError(
                 f"Arquivo necessário não encontrado: {required_path}. "
-                "Coloque o teste como data/raw/final_teste.csv e mantenha os artefatos das etapas 4 e 5."
+                "Coloque o teste como data/raw/final_teste.csv e execute antes a busca final no notebook 01."
             )
 
     train = _normalise_columns(pd.read_csv(train_path), train_path)
@@ -191,43 +188,32 @@ def evaluate_official_test(
     )
 
     search_results = json.loads(search_path.read_text(encoding="utf-8"))
-    threshold_results = json.loads(threshold_path.read_text(encoding="utf-8"))
-    model_params = search_results["best_params_on_full_development"]
-    thresholds = threshold_results["models"]
-    absent_models = set(MODEL_NAMES) - set(model_params) | (set(MODEL_NAMES) - set(thresholds))
-    if absent_models:
-        raise ValueError(f"Artefatos incompletos para os modelos: {sorted(absent_models)}")
+    model_params = search_results["best_params_on_all_labeled_data"]
+    nested = search_results.get("nested_cv", {})
+    if not nested:
+        raise ValueError("O artefato não contém resultados da validação aninhada.")
+    selected_model = max(nested, key=lambda name: nested[name]["outer_auc_mean"])
+    if selected_model not in MODEL_NAMES or selected_model not in model_params:
+        raise ValueError("O modelo selecionado não tem parâmetros finais registrados.")
 
     # Se os dados rotulados mudaram, os parâmetros salvos podem estar obsoletos.
     protocol = search_results.get("protocol", {})
-    expected_rows = protocol.get("development_rows")
-    expected_holdout_rows = protocol.get("holdout_reserved_rows")
-    if (
-        expected_rows is not None
-        and expected_holdout_rows is not None
-        and len(train) != expected_rows + expected_holdout_rows
-    ):
-        raise ValueError(
-            "O número de linhas do treino mudou desde a busca da etapa 4. "
-            "Atualize a busca de hiperparâmetros antes de pontuar o teste."
-        )
     expected_hash = protocol.get("labeled_training_file_sha256")
     if expected_hash is not None:
         actual_hash = hashlib.sha256(train_path.read_bytes()).hexdigest()
         if actual_hash != expected_hash:
             raise ValueError(
                 "O CSV de treino mudou desde a busca da etapa 4. "
-                "Atualize os hiperparâmetros e limiares antes de pontuar o teste."
+                "Execute novamente o notebook 01 antes de pontuar o teste."
             )
 
     preprocessor = _build_preprocessor()
     models = _build_models()
     score_columns: dict[str, np.ndarray] = {}
     score_types: dict[str, str] = {}
-    prediction_columns: dict[str, np.ndarray] = {}
     rows: list[dict[str, Any]] = []
 
-    for name in MODEL_NAMES:
+    for name in [selected_model]:
         pipeline = Pipeline(
             steps=[("preprocessor", clone(preprocessor)), ("model", clone(models[name]))]
         )
@@ -241,54 +227,21 @@ def evaluate_official_test(
         else:
             score = pipeline.decision_function(X_test)
             score_type = "decision_function (não é probabilidade)"
-        threshold = float(thresholds[name]["threshold"])
-        predicted_class = (score >= threshold).astype(int)
         score_columns[f"{name}_score"] = score
-        score_columns[f"{name}_predicted_class"] = predicted_class
         score_types[name] = score_type
 
         row: dict[str, Any] = {
             "Modelo": name,
             "Tipo de score": score_type,
-            "Limiar (OOF treino)": threshold,
         }
         if y_test is not None:
             y_array = y_test.to_numpy()
             row["AUC-ROC"] = (
                 float(roc_auc_score(y_array, score)) if np.unique(y_array).size == 2 else None
             )
-            tn, fp, fn, tp = confusion_matrix(y_array, predicted_class, labels=[0, 1]).ravel()
-            sensitivity = _safe_ratio(tp, tp + fn)
-            specificity = _safe_ratio(tn, tn + fp)
-            lr_minus = None
-            lr_minus_infinite = False
-            lr_minus_undefined = False
-            if sensitivity is not None and specificity == 0.0:
-                if sensitivity == 1.0:
-                    lr_minus_undefined = True  # 0 / 0
-                else:
-                    lr_minus_infinite = True  # positivo / 0
-            elif sensitivity is not None and specificity is not None:
-                lr_minus = (1.0 - sensitivity) / specificity
-            row.update(
-                {
-                    "Sensibilidade": sensitivity,
-                    "Especificidade": specificity,
-                    "LR−": lr_minus,
-                    "LR− infinito": lr_minus_infinite,
-                    "LR− indefinido": lr_minus_undefined,
-                    "F1": float(f1_score(y_array, predicted_class, zero_division=0)),
-                    "TN": int(tn),
-                    "FP": int(fp),
-                    "FN": int(fn),
-                    "TP": int(tp),
-                }
-            )
         rows.append(row)
 
     metrics = pd.DataFrame(rows)
-    if y_test is not None and "AUC-ROC" in metrics:
-        metrics = metrics.sort_values("AUC-ROC", ascending=False, na_position="last")
     metrics = metrics.reset_index(drop=True)
 
     predictions = pd.DataFrame({ID_COLUMN: test[ID_COLUMN], **score_columns})
@@ -298,11 +251,13 @@ def evaluate_official_test(
     summary: dict[str, Any] = {
         "test_file": test_filename,
         "training_rows_used_for_refit": int(len(X_train)),
+        "model_selected_before_official_test": selected_model,
+        "selection_source": "highest mean outer ROC-AUC in nested CV on labeled training data",
         "test_rows_scored": int(len(X_test)),
         "test_labels_available": y_test is not None,
+        "hyperparameters_source": "stage4_model_search.json; final stratified CV search on all labeled training rows",
         "test_labels_used_for_training_or_tuning": False,
-        "hyperparameters_source": "stage4_model_search.json; best CV parameters from development data",
-        "threshold_source": "stage5_results.json; selected with OOF scores from development only",
+        "test_labels_used_only_for_post_prediction_metrics": y_test is not None,
         "score_type_by_model": score_types,
         "models": json.loads(metrics.to_json(orient="records")),
         "row_level_scores_file": "results/official_test_model_scores.csv",
@@ -314,7 +269,7 @@ def evaluate_official_test(
     figure = None
     if y_test is not None and y_test.nunique() == 2:
         figure, ax = plt.subplots(figsize=(7.5, 6.5))
-        for name in MODEL_NAMES:
+        for name in [selected_model]:
             score = score_columns[f"{name}_score"]
             fpr, tpr, _ = roc_curve(y_test, score, pos_label=1)
             auc_value = roc_auc_score(y_test, score)
