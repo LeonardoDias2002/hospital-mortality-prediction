@@ -17,7 +17,8 @@ Não há garantia de que um algoritmo específico seja o melhor. Modelos baseado
 │   └── raw/
 │       └── .gitkeep         # Mantém o diretório; dados locais são ignorados
 ├── notebooks/
-│   └── 01_auditoria_inicial.ipynb
+│   ├── 01_auditoria_inicial.ipynb
+│   └── 02_avaliacao_teste.ipynb
 ├── results/
 │   ├── stage4_model_search.json
 │   ├── stage5_results.json
